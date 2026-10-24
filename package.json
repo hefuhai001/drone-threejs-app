@@ -1,0 +1,24 @@
+{
+  "name": "dji-air-3s-structure-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Interactive DJI Air 3S 3D teardown visualization built with Three.js — all geometry generated in code.",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=iife --target=es2020 --outfile=app.js",
+    "build:min": "esbuild src/main.js --bundle --format=iife --target=es2020 --minify --outfile=app.js",
+    "serve": "node server.mjs",
+    "start": "node server.mjs",
+    "build:dist": "npm run build && node scripts/build-dist.mjs",
+    "deploy": "npm run build:dist && wrangler pages deploy dist --project-name=drone-threejs-app --commit-dirty=true",
+    "test:interaction": "node test/raycast.mjs",
+    "test:mobile": "node test/mobile.mjs"
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.1",
+    "wrangler": "^4.152.0"
+  }
+}

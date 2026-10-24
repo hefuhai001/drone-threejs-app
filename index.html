@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#04080b" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="description" content="DJI Air 3S 交互式 3D 结构拆解可视化 — Three.js 实时渲染，点击部件探索双摄云台、电池、机臂、电机与桨叶结构。" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23050b0e'/%3E%3Cpath d='M13 40V25h7v15h-7Zm13 0V25h7l8 9V25h7v15h-7l-8-9v9h-7Z' fill='%2370f5ff'/%3E%3C/svg%3E" />
+  <title>DJI Air 3S · 结构拆解实验室</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="boot" id="bootScreen" aria-hidden="true">
+    <div class="boot__grid"></div>
+    <div class="boot__inner">
+      <div class="boot__brand"><span class="dji-mark">dji</span><i></i><span>AIR 3S</span></div>
+      <p class="boot__overline">STRUCTURE DECONSTRUCTION SYSTEM</p>
+      <div class="boot__bar"><span id="bootBar"></span></div>
+      <div class="boot__meta"><span id="bootStatus">INITIALIZING AIRFRAME</span><span id="bootPercent">000</span></div>
+    </div>
+    <div class="boot__corner boot__corner--tl"></div>
+    <div class="boot__corner boot__corner--tr"></div>
+    <div class="boot__corner boot__corner--bl"></div>
+    <div class="boot__corner boot__corner--br"></div>
+  </div>
+
+  <main id="app" class="app">
+    <canvas id="scene" aria-label="DJI Air 3S 三维交互模型，可拖拽旋转、滚轮缩放并点击部件拆解"></canvas>
+
+    <div class="atmosphere" aria-hidden="true">
+      <div class="atmosphere__grid"></div>
+      <div class="atmosphere__glow"></div>
+      <div class="atmosphere__scan"></div>
+      <div class="atmosphere__vignette"></div>
+    </div>
+
+    <div class="ui-shell">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="DJI Air 3S 结构拆解实验室首页">
+          <span class="brand__mark">dji</span>
+          <span class="brand__rule"></span>
+          <span class="brand__copy">
+            <span class="brand__kicker">STRUCTURE DECONSTRUCTION / 01</span>
+            <span class="brand__title">AIR <b>3S</b></span>
+          </span>
+        </a>
+
+        <div class="topbar__center" aria-hidden="true">
+          <span class="center-line"></span>
+          <span class="topbar__eyebrow" id="viewModeLabel">ASSEMBLED VIEW · REAL-TIME 3D</span>
+          <span class="center-line"></span>
+        </div>
+
+        <div class="topbar__actions">
+          <div class="sys-pill"><i></i><span>SYS.ONLINE</span></div>
+          <div class="fps-readout" aria-label="实时帧率">
+            <span>FPS</span><b id="fpsValue">60</b>
+          </div>
+          <button class="icon-button" id="helpButton" type="button" aria-label="打开操作指南" title="操作指南 (H)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"></circle><path d="M9.7 9.15a2.45 2.45 0 1 1 3.55 2.2c-.8.45-1.25.85-1.25 1.8"></path><circle cx="12" cy="16.7" r=".85" class="fill"></circle></svg>
+          </button>
+        </div>
+      </header>
+
+      <aside class="panel parts-panel" id="partsPanel" aria-label="部件清单">
+        <div class="panel__rail" aria-hidden="true"><span>MANIFEST</span><i></i></div>
+        <div class="panel__inner">
+          <div class="micro-row">
+            <span>INDEX / 01</span>
+            <span id="assemblyState">ASSEMBLED</span>
+          </div>
+          <div class="parts-heading">
+            <div>
+              <span class="eyebrow">COMPONENT MANIFEST</span>
+              <h2>部件清单</h2>
+            </div>
+            <div class="explode-counter" aria-live="polite">
+              <b id="explodedCount">00</b><span>/ 07</span>
+            </div>
+          </div>
+          <div class="part-list" id="partList" role="group" aria-label="可选部件"></div>
+          <div class="parts-footer">
+            <div class="assembly-progress" aria-hidden="true"><span id="assemblyProgress"></span></div>
+            <div class="parts-footer__meta">
+              <span>DECONSTRUCTION PROGRESS</span>
+              <b id="assemblyPercent">0%</b>
+            </div>
+            <p><span class="prompt-mark">↳</span> 点击部件，逐层观察飞行器内部结构</p>
+          </div>
+        </div>
+        <button class="panel__collapse" id="partsCollapse" type="button" aria-label="收起部件清单">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>
+        </button>
+      </aside>
+
+      <aside class="panel info-panel" id="infoPanel" aria-label="部件信息">
+        <div class="panel__rail panel__rail--right" aria-hidden="true"><span>TELEMETRY</span><i></i></div>
+        <div class="panel__inner">
+          <section class="profile-view" id="profileView">
+            <div class="micro-row">
+              <span>CORE PROFILE</span>
+              <span>AIR 3S</span>
+            </div>
+            <div class="profile-hero">
+              <span class="eyebrow">FLAGSHIP DUAL-CAMERA</span>
+              <h2>轻于 724 克<br /><em>双摄，双倍视野。</em></h2>
+              <p>将一英寸广角与 1/1.3 英寸中长焦装进同一台紧凑机身。选择一个部件，进入 Air 3S 的结构层。</p>
+            </div>
+            <div class="profile-stats">
+              <div class="profile-stat"><b>45</b><span>MIN</span><small>最长飞行时间</small></div>
+              <div class="profile-stat"><b>724</b><span>G</span><small>起飞重量</small></div>
+              <div class="profile-stat"><b>2×</b><span>CAM</span><small>双摄系统</small></div>
+              <div class="profile-stat"><b>62.5</b><span>WH</span><small>电池能量</small></div>
+            </div>
+            <div class="sensor-strip">
+              <div class="sensor-strip__label"><span>SENSOR ARRAY</span><b>全向感知</b></div>
+              <div class="sensor-bars" aria-hidden="true">
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+              </div>
+              <p>全向双目视觉 · 前视激光雷达 · 下视红外</p>
+            </div>
+            <button class="profile-prompt" id="profilePrompt" type="button">
+              <span class="profile-prompt__icon">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"></path><circle cx="12" cy="12" r="4.2"></circle></svg>
+              </span>
+              <span><b>选择部件，展开技术参数</b><small>CLICK ANY MODULE TO INSPECT</small></span>
+              <span class="profile-prompt__arrow">↗</span>
+            </button>
+          </section>
+
+          <section class="detail-view" id="detailView" hidden aria-live="polite"></section>
+        </div>
+      </aside>
+
+      <div class="labels-layer" id="labelsLayer" aria-label="部件标注">
+        <svg class="label-lines" id="labelLines" aria-hidden="true"></svg>
+        <div id="labelNodes"></div>
+      </div>
+
+      <div class="hover-tip" id="hoverTip" aria-hidden="true"></div>
+
+      <div class="frame-marks" aria-hidden="true">
+        <i class="frame-mark frame-mark--tl"></i>
+        <i class="frame-mark frame-mark--tr"></i>
+        <i class="frame-mark frame-mark--bl"></i>
+        <i class="frame-mark frame-mark--br"></i>
+      </div>
+
+      <div class="view-note" aria-hidden="true">
+        <span>DRAG TO ORBIT</span><i></i><span>SCROLL TO ZOOM</span>
+      </div>
+
+      <section class="guide-card" aria-label="操作引导">
+        <div class="guide-card__head">
+          <span>操作指引 / QUICK GUIDE</span>
+          <span class="live-dot"><i></i>LIVE</span>
+        </div>
+        <div class="guide-grid">
+          <div class="guide-item">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="9" y="4.5" width="14" height="23" rx="7"></rect><path d="M16 5v10"></path><path d="M12 23.5h8"></path></svg>
+            <span><b>拖拽</b><small>旋转视角</small></span>
+          </div>
+          <div class="guide-item">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 7v18M11 12l5-5 5 5M11 20l5 5 5-5"></path><circle cx="16" cy="16" r="11.5"></circle></svg>
+            <span><b>滚轮</b><small>缩放镜头</small></span>
+          </div>
+          <div class="guide-item">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M11 5.5v13l3.2-2.2 2.1 5.1 3-1.25-2.05-5.05 3.8-.3L11 5.5Z"></path><path d="M22 12.5l3-3M23 19h4M9 24l-3 3"></path></svg>
+            <span><b>点击</b><small>拆解部件</small></span>
+          </div>
+        </div>
+        <div class="guide-keys"><kbd>E</kbd> 全部拆解 <span></span><kbd>R</kbd> 重置视角 <span></span><kbd>H</kbd> 指南</div>
+      </section>
+
+      <div class="bottom-bar">
+        <div class="scene-readout" aria-hidden="true">
+          <span class="scene-readout__label">SCENE / 01</span>
+          <div class="scene-readout__rows">
+            <span>X <b id="axisX">+0.00</b></span>
+            <span>Y <b id="axisY">+0.00</b></span>
+            <span>Z <b id="axisZ">+0.00</b></span>
+          </div>
+        </div>
+
+        <div class="control-dock" role="toolbar" aria-label="视图控制">
+          <button class="dock-button dock-button--primary" id="explodeAllButton" type="button" aria-pressed="false">
+            <span class="dock-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.3 8.3 3.8 3.8M15.7 8.3l4.5-4.5M8.3 15.7l-4.5 4.5M15.7 15.7l4.5 4.5"></path><path d="M9 5H5v4M19 5h-4v4M5 15v4h4M19 15v4h-4"></path><rect x="9.2" y="9.2" width="5.6" height="5.6" rx="1.2"></rect></svg>
+            </span>
+            <span class="dock-copy"><b id="explodeAllLabel">全部拆解</b><small>EXPLODE ALL</small></span>
+          </button>
+          <span class="dock-divider"></span>
+          <button class="dock-button" id="tourButton" type="button" aria-pressed="false">
+            <span class="dock-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.34-5.66"></path><path d="M4 4v4.5h4.5"></path><path d="m10 8.6 5.3 3.4L10 15.4V8.6Z"></path></svg>
+            </span>
+            <span class="dock-copy"><b>自动巡览</b><small>AUTO TOUR</small></span>
+          </button>
+          <button class="dock-button" id="rotateButton" type="button" aria-pressed="false">
+            <span class="dock-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="12" rx="3.1" ry="8.2"></ellipse><path d="M4.2 12h15.6"></path><path d="M6.1 7.2c3.5 1.4 8.3 1.4 11.8 0M6.1 16.8c3.5-1.4 8.3-1.4 11.8 0"></path></svg>
+            </span>
+            <span class="dock-copy"><b>自动旋转</b><small>AUTO ORBIT</small></span>
+          </button>
+          <button class="dock-button" id="resetButton" type="button">
+            <span class="dock-icon">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v4M12 16v4M4 12h4M16 12h4"></path><circle cx="12" cy="12" r="2.7"></circle><path d="M6.3 6.3 8.8 8.8M17.7 6.3l-2.5 2.5M6.3 17.7l2.5-2.5M17.7 17.7l-2.5-2.5"></path></svg>
+            </span>
+            <span class="dock-copy"><b>重置视角</b><small>RESET VIEW</small></span>
+          </button>
+        </div>
+
+        <button class="mobile-parts-button" id="partsToggle" type="button" aria-expanded="false" aria-controls="partsPanel">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>
+          <span>部件清单</span>
+        </button>
+
+        <div class="sequence-readout" aria-hidden="true">
+          <div class="sequence-readout__top"><span>EXPLODE SEQUENCE</span><b id="sequenceCount">00/07</b></div>
+          <div class="sequence-bars" id="sequenceBars"></div>
+        </div>
+      </div>
+
+      <div class="toast" id="toast" role="status" aria-live="polite">
+        <span class="toast__dot"></span>
+        <span id="toastText">点击任意部件，开始结构拆解</span>
+      </div>
+    </div>
+
+    <div class="guide-modal" id="guideModal" hidden role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+      <div class="guide-modal__scrim" data-close-guide></div>
+      <div class="guide-modal__card">
+        <div class="guide-modal__top">
+          <span>FIELD MANUAL / 001</span>
+          <button class="icon-button" id="closeGuideButton" type="button" aria-label="关闭操作指南">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"></path></svg>
+          </button>
+        </div>
+        <span class="eyebrow">AIR 3S / STRUCTURE LAB</span>
+        <h2 id="guideTitle">操作指南</h2>
+        <p class="guide-modal__intro">这是一台完全由代码生成的 Air 3S 三维结构模型。没有加载任何外部模型文件，每一处倒角、桨叶曲面与部件关系都通过 Three.js 实时构建。</p>
+        <div class="manual-grid">
+          <div class="manual-item"><span>01</span><div><b>环视与缩放</b><p>按住鼠标左键拖拽旋转视角，滚轮或双指捏合缩放。右键拖拽可平移观察中心。</p></div></div>
+          <div class="manual-item"><span>02</span><div><b>拆解部件</b><p>直接点击模型上的任意部件，或在左侧清单中选择。再次点击同一部件可将其归位。</p></div></div>
+          <div class="manual-item"><span>03</span><div><b>查看参数</b><p>右侧面板会展示部件的官方规格、结构说明与实时装配状态。点击「定位视角」可聚焦观察。</p></div></div>
+          <div class="manual-item"><span>04</span><div><b>快捷操作</b><p><kbd>E</kbd> 全部拆解 · <kbd>T</kbd> 自动巡览 · <kbd>A</kbd> 自动旋转 · <kbd>R</kbd> 重置 · <kbd>Esc</kbd> 关闭面板</p></div></div>
+        </div>
+        <div class="manual-foot">
+          <span>MODEL / DJI AIR 3S</span>
+          <span>RENDERER / THREE.JS · WEBGL</span>
+          <span>SPEC / DJI OFFICIAL</span>
+        </div>
+      </div>
+    </div>
+
+    <noscript>
+      <div class="noscript">请启用 JavaScript 以查看 Air 3S 交互式三维结构。</div>
+    </noscript>
+  </main>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
