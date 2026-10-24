@@ -11,7 +11,8 @@
     "build:dist": "npm run build && node scripts/build-dist.mjs",
     "deploy": "npm run build:dist && wrangler pages deploy dist --project-name=drone-threejs-app --commit-dirty=true",
     "test:interaction": "node test/raycast.mjs",
-    "test:mobile": "node test/mobile.mjs"
+    "test:mobile": "node test/mobile.mjs",
+    "test:live": "node test/live-check.mjs"
   },
   "dependencies": {
     "three": "^0.186.1"

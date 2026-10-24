@@ -4,6 +4,11 @@
 
 ![DJI Air 3S Structure Lab](test/shots/final-initial.png)
 
+## 在线地址
+
+- **Cloudflare Pages**：https://drone-threejs-app.pages.dev/
+- **GitHub**：https://github.com/hefuhai001/drone-threejs-app
+
 ## 运行
 
 最简方式：直接双击 `index.html`。Three.js 已打包进 `app.js`，通过 `file://` 打开即可正常运行，无需联网。
@@ -21,6 +26,20 @@ npm run serve
 ```bash
 npm run build
 ```
+
+## 部署到 Cloudflare Pages
+
+项目已托管在 Cloudflare Pages 的 `drone-threejs-app` 项目下。更新线上站点：
+
+```bash
+# 首次部署前先登录（OAuth）
+npx wrangler login
+
+# 构建 dist/ 并上传为生产部署
+npm run deploy
+```
+
+`dist/` 中只包含运行页面所需的 `index.html`、`style.css`、`app.js`、`robots.txt` 与 `_headers`，不会上传源码或 `node_modules`。
 
 ## 交互
 
@@ -58,6 +77,8 @@ style.css         深色科技视觉与响应式布局
 src/main.js       模型、场景、材质、交互与动画
 app.js            esbuild 打包后的完整可运行脚本（含 Three.js）
 server.mjs        本地静态服务器
+scripts/          构建 Cloudflare Pages 部署目录
+wrangler.toml     Cloudflare Pages 项目配置
 test/             Playwright 自动化与截图
 ```
 
