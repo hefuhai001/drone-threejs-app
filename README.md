@@ -8,6 +8,7 @@
 
 - **Cloudflare Pages**：https://drone-threejs-app.pages.dev/
 - **GitHub**：https://github.com/hefuhai001/drone-threejs-app
+- **项目提示词**：[PROMPT.md](PROMPT.md)（生成此项目的完整原始需求）
 
 ## 运行
 
